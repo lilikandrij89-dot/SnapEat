@@ -1,43 +1,38 @@
 // api/food.js
 export default async function handler(req, res) {
   const { query } = req.query;
+  const searchQuery = query ? query.toLowerCase() : "";
 
-  if (!query) return res.status(400).json({ error: "No query" });
+  // Временная база данных прямо в коде
+  const mockDatabase = [
+    { id: "1", name: "Куриное филе", kcal: 165, img: "https://открытый-источник.рф/chicken.jpg" },
+    { id: "2", name: "Яблоко красное", kcal: 52, img: "" },
+    { id: "3", name: "Гречневая каша", kcal: 132, img: "" },
+    { id: "4", name: "Творог 5%", kcal: 121, img: "" },
+    { id: "5", name: "Банан", kcal: 89, img: "" },
+    { id: "6", name: "Яйцо вареное", kcal: 155, img: "" },
+    { id: "7", name: "Овсянка", kcal: 68, img: "" },
+    { id: "8", name: "Chicken Breast", kcal: 165, img: "" },
+    { id: "9", name: "Apple", kcal: 52, img: "" }
+  ];
 
-  try {
-    // Используем глобальный поиск Open Food Facts
-    const response = await fetch(
-      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20`,
-      {
-        headers: {
-          'User-Agent': 'BalanseApp - Web - Version 1.0' // OFF просит указывать User-Agent
-        }
-      }
-    );
+  // Фильтруем список по твоему запросу
+  const filtered = mockDatabase.filter(item => 
+    item.name.toLowerCase().includes(searchQuery)
+  );
 
-    const text = await response.text();
-    
-    // Проверяем, пришел ли нам JSON или HTML-мусор
-    if (text.trim().startsWith('<!DOCTYPE')) {
-      return res.status(503).json({ error: "База данных временно перегружена. Попробуй через минуту." });
+  // Форматируем под структуру, которую ждет твой фронтенд
+  const results = filtered.map(item => ({
+    food: {
+      foodId: item.id,
+      label: item.name,
+      nutrients: { ENERC_KCAL: item.kcal },
+      image: item.img
     }
+  }));
 
-    const data = JSON.parse(text);
-
-    // Маппим данные под твой фронтенд
-    const results = (data.products || []).map(p => ({
-      food: {
-        foodId: p.code || Math.random().toString(),
-        label: p.product_name || p.product_name_ru || p.product_name_uk || "Продукт",
-        nutrients: {
-          ENERC_KCAL: p.nutriments?.["energy-kcal_100g"] || p.nutriments?.["energy-kcal"] || 0
-        },
-        image: p.image_front_url || p.image_url || ""
-      }
-    }));
-
+  // Имитируем задержку сети (0.5 сек) и отдаем результат
+  setTimeout(() => {
     res.status(200).json(results);
-  } catch (error) {
-    res.status(500).json({ error: "Ошибка сервера", details: error.message });
-  }
+  }, 500);
 }
