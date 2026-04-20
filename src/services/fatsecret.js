@@ -23,22 +23,25 @@ const getAccessToken = async () => {
 };
 
 export const searchFood = async (query) => {
-  if (!accessToken) await getAccessToken();
-
-  const url = `https://platform.fatsecret.com/rest/server.api?method=foods.search&search_expression=${encodeURIComponent(query)}&format=json&language=ru`;
+  if (!query || query.length < 2) return [];
 
   try {
-    const response = await fetch('https://corsproxy.io/?' + encodeURIComponent(url), {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
+    // Стучимся в наш "мостик", который мы создали в api/food.js
+    const response = await fetch(`/api/food?query=${encodeURIComponent(query)}`);
+    
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+
     const data = await response.json();
+    
+    // FatSecret возвращает либо массив, либо один объект, либо ничего.
+    // Обрабатываем все случаи, чтобы всегда возвращать массив.
     const foodResults = data.foods?.food || [];
     return Array.isArray(foodResults) ? foodResults : [foodResults];
+    
   } catch (error) {
-    console.error('FatSecret Search Error:', error);
+    console.error('FatSecret Search Error (via API):', error);
     return [];
   }
 };
