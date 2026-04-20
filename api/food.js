@@ -1,27 +1,29 @@
-// api/food.js
 export default async function handler(req, res) {
   const { query } = req.query;
+  const appId = process.env.EDAMAM_APP_ID || "d489c93a";
+  const apiKey = process.env.EDAMAM_APP_KEY || "1288d4a7c577bd7b092c2618b99451b8";
+
   if (!query) return res.status(400).json({ error: "No query" });
 
   try {
-    // Добавляем параметры региона (ua) и языков (ru,uk)
-    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20&cc=ua&lc=ru`;
+    const url = `https://api.edamam.com/api/food-database/v2/parser?app_id=${appId}&app_key=${apiKey}&ingr=${encodeURIComponent(query)}&nutrition-type=logging`;
     
-    const response = await fetch(url, {
-      headers: { 'User-Agent': 'BalanseApp/1.0' }
-    });
-    const data = await response.json();
+    const response = await fetch(url);
+    if (!response.ok) return res.status(response.status).json({ error: "Key Error" });
 
-    const results = (data.products || []).map(p => ({
+    const data = await response.json();
+    
+    const results = (data.hints || []).map(item => ({
       food: {
-        foodId: p.code || Math.random().toString(),
-        // Проверяем все варианты названий
-        label: p.product_name_ru || p.product_name_uk || p.product_name || "Продукт",
+        foodId: item.food.foodId,
+        label: item.food.label,
         nutrients: {
-          ENERC_KCAL: p.nutriments?.["energy-kcal_100g"] || p.nutriments?.["energy-kcal"] || 0
+          ENERC_KCAL: Math.round(item.food.nutrients.ENERC_KCAL || 0),
+          PROCNT: Math.round(item.food.nutrients.PROCNT || 0), // Белки
+          FAT: Math.round(item.food.nutrients.FAT || 0),       // Жиры
+          CHOCDF: Math.round(item.food.nutrients.CHOCDF || 0)  // Углеводы
         },
-        // Берем маленькое превью (thumb), оно грузится быстрее
-        image: p.image_front_small_url || p.image_small_url || p.image_url || ""
+        image: item.food.image || ""
       }
     }));
 
