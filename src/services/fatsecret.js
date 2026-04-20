@@ -1,5 +1,3 @@
-// src/services/fatsecret.js
-
 export const searchFood = async (query) => {
   if (!query || query.length < 2) return [];
 
@@ -7,14 +5,12 @@ export const searchFood = async (query) => {
     const response = await fetch(`/api/food?query=${encodeURIComponent(query)}`);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Сервер вернул ошибку:", errorText);
+      console.error("Ошибка API");
       return [];
     }
 
     const hints = await response.json();
     
-    // Преобразуем данные Edamam под твой интерфейс
     return hints.map(item => ({
       food_id: item.food.foodId,
       food_name: item.food.label,
@@ -23,7 +19,7 @@ export const searchFood = async (query) => {
     }));
 
   } catch (error) {
-    console.error("Критическая ошибка на фронтенде:", error);
+    console.error("Search error:", error);
     return [];
   }
-}; 
+};
