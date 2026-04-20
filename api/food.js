@@ -1,33 +1,23 @@
+
 export default async function handler(req, res) {
   const { query } = req.query;
-  const id = process.env.VITE_FATSECRET_CLIENT_ID;
-  const secret = process.env.VITE_FATSECRET_CLIENT_SECRET;
+  const appId = process.env.EDAMAM_APP_ID;
+  const apiKey = process.env.EDAMAM_APP_KEY;
 
   if (!query) return res.status(400).json({ error: "No query" });
 
   try {
-    // 1. Получаем токен
-    const authRes = await fetch("https://oauth.fatsecret.com/connect/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": "Basic " + Buffer.from(`${id}:${secret}`).toString("base64"),
-      },
-      body: "grant_type=client_credentials&scope=basic",
-    });
-
-    const tokenData = await authRes.json();
-    const access_token = tokenData.access_token;
-
-    // 2. Ищем еду
-    const searchRes = await fetch(
-      `https://platform.fatsecret.com/rest/server.api?method=foods.search&search_expression=${encodeURIComponent(query)}&format=json&region=RU&language=ru`,
-      { headers: { Authorization: `Bearer ${access_token}` } }
+    // Edamam API запрос
+    const response = await fetch(
+      `https://api.edamam.com/api/food-database/v2/parser?app_id=${appId}&app_key=${apiKey}&ingr=${encodeURIComponent(query)}&nutrition-type=logging`
     );
 
-    const data = await searchRes.json();
-    res.status(200).json(data);
+    const data = await response.json();
+    
+    // Возвращаем "hints" — это список найденных продуктов
+    res.status(200).json(data.hints || []);
   } catch (error) {
+    console.error("Edamam Error:", error);
     res.status(500).json({ error: error.message });
   }
 }
