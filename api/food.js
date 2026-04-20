@@ -1,23 +1,31 @@
+// api/food.js
 export default async function handler(req, res) {
   const { query } = req.query;
 
-  // ВСТАВЬ СВОИ КЛЮЧИ СЮДА ПРЯМО ТЕКСТОМ ДЛЯ ПРОВЕРКИ
-  const appId = "1fb00675"; 
-  const apiKey = "8b6eb41b1a47542ae8d5ad8705e1cff2";
+  if (!query) return res.status(400).json({ error: "No query" });
 
   try {
-    const url = `https://api.edamam.com/api/food-database/v2/parser?app_id=${appId}&app_key=${apiKey}&ingr=${encodeURIComponent(query)}&nutrition-type=logging`;
+    // Ищем продукты в открытой базе
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=20`;
     
     const response = await fetch(url);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(response.status).json({ error: "Edamam всё еще не пускает", details: errorText });
-    }
-
     const data = await response.json();
-    res.status(200).json(data.hints || []);
+
+    // Преобразуем формат под твой фронтенд (симулируем структуру Edamam)
+    const results = (data.products || []).map(p => ({
+      food: {
+        foodId: p.code || p.id,
+        label: p.product_name || p.product_name_ru || p.product_name_en || "Продукт без названия",
+        nutrients: {
+          ENERC_KCAL: p.nutriments?.["energy-kcal_100g"] || p.nutriments?.["energy-kcal"] || 0
+        },
+        image: p.image_url || p.image_front_url
+      }
+    }));
+
+    res.status(200).json(results);
   } catch (error) {
+    console.error("OpenFoodFacts Error:", error);
     res.status(500).json({ error: error.message });
   }
 }
