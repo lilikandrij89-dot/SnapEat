@@ -13,7 +13,6 @@ const Gym = ({ user, showToast }) => {
   const [selectedCategory, setSelectedCategory] = useState('arms');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  // Иконки вместо эмодзи
   const categoryIcons = {
     arms: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12M6 21h12M12 3v18M3 7h3M18 7h3M3 17h3M18 17h3"/></svg>,
     legs: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3v18M17 3v18M3 11h18M3 15h18"/></svg>,
@@ -92,21 +91,34 @@ const Gym = ({ user, showToast }) => {
         <div className="space-y-4">
           <div className="bg-zinc-900/40 border border-zinc-800/50 p-5 rounded-[35px] mb-8 shadow-xl">
              <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-4 ml-1">Add new training day</p>
-             <div className="flex gap-2">
-                <input type="text" placeholder="Название..." value={newDayName} onChange={(e) => setNewDayName(e.target.value)} className="flex-1 bg-black/40 border border-zinc-800 rounded-xl p-3 text-xs font-bold outline-none focus:border-blue-500" />
-                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="flex-1 bg-black/40 border border-zinc-800 rounded-xl p-3 text-[10px] font-black uppercase text-zinc-500 outline-none"> 
-                  <option value="arms">Руки</option>
-                  <option value="legs">Ноги</option>
-                  <option value="back">Спина</option>
-                  <option value="chest">Грудь</option>
-                  <option value="full">Фуллбади</option>
-                </select>
-                <button onClick={async () => {
-                  if (!newDayName) return;
-                  const id = Date.now().toString();
-                  await setDoc(doc(db, "users", user.uid, "gym_templates", id), { id, name: newDayName, category: selectedCategory, exercises: [] });
-                  setNewDayName('');
-                }} className="bg-blue-600 px-5 rounded-xl font-black text-xs">+</button>
+             {/* АДАПТИВНАЯ СЕТКА */}
+             <div className="flex flex-col gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Название..." 
+                  value={newDayName} 
+                  onChange={(e) => setNewDayName(e.target.value)} 
+                  className="w-full bg-black/40 border border-zinc-800 rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500 transition-all text-white" 
+                />
+                <div className="flex gap-2">
+                  <select 
+                    value={selectedCategory} 
+                    onChange={(e) => setSelectedCategory(e.target.value)} 
+                    className="flex-1 bg-black/40 border border-zinc-800 rounded-xl p-3 text-[10px] font-black uppercase text-zinc-500 outline-none appearance-none"
+                  > 
+                    <option value="arms">Руки</option>
+                    <option value="legs">Ноги</option>
+                    <option value="back">Спина</option>
+                    <option value="chest">Грудь</option>
+                    <option value="full">Фуллбади</option>
+                  </select>
+                  <button onClick={async () => {
+                    if (!newDayName) return;
+                    const id = Date.now().toString();
+                    await setDoc(doc(db, "users", user.uid, "gym_templates", id), { id, name: newDayName, category: selectedCategory, exercises: [] });
+                    setNewDayName('');
+                  }} className="bg-blue-600 px-6 rounded-xl font-black text-lg shadow-lg shadow-blue-600/20 active:scale-90 transition-all">+</button>
+                </div>
              </div>
           </div>
 
