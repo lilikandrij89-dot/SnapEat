@@ -1,4 +1,4 @@
-
+// api/food.js
 export default async function handler(req, res) {
   // Добавляем CORS заголовки на всякий случай
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Форматируем данные так, чтобы фронтенд их понял
+    // Форматируем данные так, чтобы твой фронтенд их понял
     const results = (data.products || []).map(p => ({
       food: {
         foodId: p.code || Math.random().toString(),
