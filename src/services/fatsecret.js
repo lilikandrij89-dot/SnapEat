@@ -1,3 +1,5 @@
+// src/services/fatsecret.js
+
 export const searchFood = async (query) => {
   if (!query || query.length < 2) return [];
 
@@ -5,12 +7,13 @@ export const searchFood = async (query) => {
     const response = await fetch(`/api/food?query=${encodeURIComponent(query)}`);
     
     if (!response.ok) {
-      console.error("Ошибка API");
+      console.error("Сервер временно недоступен");
       return [];
     }
 
     const hints = await response.json();
     
+    // Приводим данные к формату карточек
     return hints.map(item => ({
       food_id: item.food.foodId,
       food_name: item.food.label,
@@ -19,7 +22,7 @@ export const searchFood = async (query) => {
     }));
 
   } catch (error) {
-    console.error("Search error:", error);
+    console.error("Ошибка поиска:", error);
     return [];
   }
 };
