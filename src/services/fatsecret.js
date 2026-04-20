@@ -1,30 +1,26 @@
 
-/**
- * Функция поиска еды.
- * Теперь она не содержит ключей и просто вызывает наш API на Vercel.
- */
 export const searchFood = async (query) => {
   if (!query || query.length < 2) return [];
 
   try {
-    // Запрос идет к серверной функции /api/food.js
     const response = await fetch(`/api/food?query=${encodeURIComponent(query)}`);
     
     if (!response.ok) {
-      console.error("Ошибка API маршрута");
+      console.error("Edamam API error");
       return [];
     }
 
-    const data = await response.json();
-
-    // FatSecret возвращает либо массив, либо объект (если 1 результат), либо ничего.
-    const foodResults = data.foods?.food || [];
-
-    // Приводим всегда к массиву, чтобы .map() не выдавал ошибку
-    return Array.isArray(foodResults) ? foodResults : [foodResults];
-
+    const hints = await response.json();
+    
+    // Преобразуем данные Edamam под твой интерфейс (названия, калории)
+    return hints.map(item => ({
+      food_id: item.food.foodId,
+      food_name: item.food.label, // Название продукта
+      food_description: `${Math.round(item.food.nutrients.ENERC_KCAL)} ккал / 100г`,
+      image: item.food.image // Картинка продукта (если есть)
+    }));
   } catch (error) {
-    console.error("Ошибка при поиске:", error);
+    console.error("Search error:", error);
     return [];
   }
 };
