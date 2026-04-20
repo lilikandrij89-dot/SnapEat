@@ -2,25 +2,24 @@
 export const searchFood = async (query) => {
   if (!query || query.length < 2) return [];
 
-  try {
+try {
     const response = await fetch(`/api/food?query=${encodeURIComponent(query)}`);
     
+    // Если статус не 200, выводим текст ошибки в консоль
     if (!response.ok) {
-      console.error("Edamam API error");
-      return [];
+        const errorHtml = await response.text(); 
+        console.error("Сервер вернул не JSON, а это:", errorHtml);
+        return [];
     }
 
     const hints = await response.json();
-    
-    // Преобразуем данные Edamam под твой интерфейс (названия, калории)
     return hints.map(item => ({
-      food_id: item.food.foodId,
-      food_name: item.food.label, // Название продукта
-      food_description: `${Math.round(item.food.nutrients.ENERC_KCAL)} ккал / 100г`,
-      image: item.food.image // Картинка продукта (если есть)
+        food_id: item.food.foodId,
+        food_name: item.food.label,
+        food_description: `${Math.round(item.food.nutrients.ENERC_KCAL)} ккал / 100г`,
+        image: item.food.image
     }));
-  } catch (error) {
-    console.error("Search error:", error);
+} catch (error) {
+    console.error("Критическая ошибка:", error);
     return [];
-  }
-};
+}
