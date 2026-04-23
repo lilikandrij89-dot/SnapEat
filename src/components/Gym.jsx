@@ -42,6 +42,7 @@ const Gym = ({ user, showToast }) => {
     const todayStr = new Date().toISOString().split('T')[0];
     const todayId = `${currentWorkout.id}_${todayStr}`;
     
+    // Проверяем, есть ли уже тренировка сегодня
     const existing = historyLogs.find(l => l.date === todayStr);
     if (existing) {
       setCurrentWorkout(existing);
@@ -49,11 +50,12 @@ const Gym = ({ user, showToast }) => {
       return;
     }
 
+    // Если это первая тренировка — берем упражнения из шаблона, иначе из последнего лога
     let exercisesToStart = [];
     if (historyLogs.length > 0) {
       exercisesToStart = JSON.parse(JSON.stringify(historyLogs[0].exercises));
     } else {
-      exercisesToStart = currentWorkout.exercises || [];
+      exercisesToStart = JSON.parse(JSON.stringify(currentWorkout.exercises || []));
     }
 
     const newLogData = {
@@ -70,15 +72,17 @@ const Gym = ({ user, showToast }) => {
     setActiveView('training');
   };
 
+  // Важно: эта функция должна обновлять документ в gym_logs, а не в шаблонах
   const updateTrainingData = async (newExercises) => {
     setCurrentWorkout(prev => ({ ...prev, exercises: newExercises }));
-    await updateDoc(doc(db, "users", user.uid, "gym_logs", currentWorkout.id), { exercises: newExercises });
+    // Определяем, мы в режиме тренировки (log) или настройки шаблона
+    const path = activeView === 'training' ? "gym_logs" : "gym_templates";
+    await updateDoc(doc(db, "users", user.uid, path, currentWorkout.id), { exercises: newExercises });
   };
 
   return (
     <div className="w-full max-w-md mx-auto pb-32 text-white px-4 animate-in fade-in duration-500 font-sans">
       
-      {/* HEADER */}
       <div className="mt-8 mb-8 flex justify-between items-center">
         <h1 className="text-3xl font-black italic uppercase tracking-tighter">Тренировка<span className="text-blue-500">.</span></h1>
         <div className="bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-2xl text-[10px] font-black text-zinc-500 italic uppercase">
@@ -86,12 +90,10 @@ const Gym = ({ user, showToast }) => {
         </div>
       </div>
 
-      {/* VIEW: LIST (Главное меню) */}
       {activeView === 'list' && (
         <div className="space-y-4">
           <div className="bg-zinc-900/40 border border-zinc-800/50 p-5 rounded-[35px] mb-8 shadow-xl">
-             <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-4 ml-1">Add new training day</p>
-             {/* АДАПТИВНАЯ СЕТКА */}
+             <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-4 ml-1 italic">Add new training day</p>
              <div className="flex flex-col gap-2">
                 <input 
                   type="text" 
@@ -141,20 +143,13 @@ const Gym = ({ user, showToast }) => {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M9 18l6-6-6-6"/></svg>
                   </div>
                 </button>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteConfirm(t);
-                  }} 
-                  className="absolute -top-1 -right-1 bg-zinc-800 text-zinc-500 w-7 h-7 rounded-full text-[10px] border border-zinc-700/50 flex items-center justify-center hover:text-red-500 transition-colors z-10 shadow-lg"
-                >✕</button>
+                <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(t); }} className="absolute -top-1 -right-1 bg-zinc-800 text-zinc-500 w-7 h-7 rounded-full text-[10px] border border-zinc-700/50 flex items-center justify-center hover:text-red-500 transition-colors z-10 shadow-lg">✕</button>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* VIEW: WORKOUT DETAIL */}
       {activeView === 'workout_detail' && (
         <div className="animate-in slide-in-from-bottom-10 space-y-6 text-center">
           <div className="py-10 flex flex-col items-center">
@@ -165,15 +160,15 @@ const Gym = ({ user, showToast }) => {
           </div>
 
           <button onClick={startNewSession} className="w-full py-6 bg-blue-600 text-white rounded-[35px] font-black uppercase text-sm tracking-widest shadow-2xl shadow-blue-600/30 active:scale-95 transition-all">
-             Начать новый день
+             Начать тренировку
           </button>
 
-          <button onClick={() => setActiveView('setup')} className="w-full py-4 border border-zinc-800 rounded-[25px] text-zinc-600 font-black uppercase text-[10px]">Редактировать упражнения</button>
+          <button onClick={() => setActiveView('setup')} className="w-full py-4 border border-zinc-800 rounded-[25px] text-zinc-600 font-black uppercase text-[10px]">Настройка упражнений</button>
           
           <div className="pt-8 text-left">
-             <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-4 ml-4">История тренировок</p>
+             <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-4 ml-4">История</p>
              <div className="space-y-3">
-                {historyLogs.length === 0 && <p className="text-[10px] text-zinc-800 text-center italic py-4">Истории пока нет</p>}
+                {historyLogs.length === 0 && <p className="text-[10px] text-zinc-800 text-center italic py-4">Пусто</p>}
                 {historyLogs.map(log => (
                   <button key={log.id} onClick={() => { setCurrentWorkout(log); setActiveView('training'); }} className="w-full bg-zinc-900/30 border border-zinc-800/40 p-5 rounded-[25px] flex justify-between items-center active:scale-95 transition-all">
                      <span className="text-xs font-black uppercase italic text-zinc-400">{log.date}</span>
@@ -182,11 +177,10 @@ const Gym = ({ user, showToast }) => {
                 ))}
              </div>
           </div>
-          <button onClick={() => setActiveView('list')} className="mt-8 text-[10px] font-black uppercase text-zinc-700 tracking-widest">Назад в меню</button>
+          <button onClick={() => setActiveView('list')} className="mt-8 text-[10px] font-black uppercase text-zinc-700 tracking-widest">Назад</button>
         </div>
       )}
 
-      {/* SETUP VIEW */}
       {activeView === 'setup' && (
         <div className="animate-in zoom-in-95 space-y-6">
           <div className="flex justify-between items-center mb-8 px-2">
@@ -195,11 +189,11 @@ const Gym = ({ user, showToast }) => {
                 await updateDoc(doc(db, "users", user.uid, "gym_templates", currentWorkout.id), { exercises: currentWorkout.exercises });
                 setActiveView('list');
                 showToast("Saved!");
-             }} className="bg-blue-600 text-white px-6 py-2 rounded-full font-black text-[9px] uppercase">Save All</button>
+             }} className="bg-blue-600 text-white px-6 py-2 rounded-full font-black text-[9px] uppercase">Сохранить план</button>
           </div>
           {currentWorkout.exercises?.map((ex, exIdx) => (
             <div key={exIdx} className="bg-zinc-900/60 border border-zinc-800 p-6 rounded-[35px] relative">
-              <input type="text" placeholder="Упражнение..." value={ex.name} className="w-full bg-transparent border-b border-zinc-800 mb-4 py-2 font-black uppercase text-sm outline-none focus:border-blue-500" onChange={(e) => {
+              <input type="text" placeholder="Название упражнения" value={ex.name} className="w-full bg-transparent border-b border-zinc-800 mb-4 py-2 font-black uppercase text-sm outline-none focus:border-blue-500" onChange={(e) => {
                   const updated = { ...currentWorkout };
                   updated.exercises[exIdx].name = e.target.value;
                   setCurrentWorkout(updated);
@@ -216,23 +210,22 @@ const Gym = ({ user, showToast }) => {
                   const updated = { ...currentWorkout };
                   updated.exercises = updated.exercises.filter((_, i) => i !== exIdx);
                   setCurrentWorkout(updated);
-              }} className="absolute top-4 right-6 text-zinc-800 hover:text-red-500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+              }} className="absolute top-4 right-6 text-zinc-800 hover:text-red-500">✕</button>
             </div>
           ))}
           <button onClick={() => {
              const updated = { ...currentWorkout };
              updated.exercises = [...(updated.exercises || []), { name: '', sets: [{ weight: '', reps: '' }] }];
              setCurrentWorkout(updated);
-          }} className="w-full py-6 border-2 border-dashed border-zinc-800 rounded-[35px] text-zinc-700 font-black uppercase text-[10px]">+ Add exercise</button>
+          }} className="w-full py-6 border-2 border-dashed border-zinc-800 rounded-[35px] text-zinc-700 font-black uppercase text-[10px]">+ Добавить упражнение</button>
         </div>
       )}
 
-      {/* TRAINING VIEW */}
       {activeView === 'training' && currentWorkout && (
         <div className="space-y-8 animate-in fade-in">
           <div className="bg-blue-600 p-6 rounded-[35px] flex justify-between items-center shadow-xl">
             <h2 className="text-lg font-black uppercase italic text-white tracking-tighter">{currentWorkout.name}</h2>
-            <button onClick={() => setActiveView('list')} className="bg-white text-blue-600 px-6 py-2 rounded-full font-black text-[8px] uppercase">Finish</button>
+            <button onClick={() => setActiveView('list')} className="bg-white text-blue-600 px-6 py-2 rounded-full font-black text-[8px] uppercase">Закончить</button>
           </div>
 
           <div className="space-y-12 px-1">
@@ -244,33 +237,29 @@ const Gym = ({ user, showToast }) => {
                     <div key={sIdx} className="flex items-center gap-3">
                       <div className="flex-1 flex items-center bg-zinc-900/40 border border-zinc-800/50 rounded-2xl p-1 px-5">
                          <input type="number" inputMode="decimal" className="w-12 bg-transparent text-sm font-black text-white outline-none py-2" value={set.weight} placeholder="0" onChange={(e) => {
-                            const val = e.target.value;
                             const updatedEx = [...currentWorkout.exercises];
-                            updatedEx[exIdx] = { ...updatedEx[exIdx], sets: [...updatedEx[exIdx].sets] };
-                            updatedEx[exIdx].sets[sIdx] = { ...updatedEx[exIdx].sets[sIdx], weight: val };
+                            updatedEx[exIdx].sets[sIdx].weight = e.target.value;
                             updateTrainingData(updatedEx);
                          }}/>
                          <span className="text-[9px] font-black text-zinc-600 uppercase mr-4">кг</span>
                          <span className="text-zinc-800 font-black opacity-30">—</span>
                          <input type="number" inputMode="numeric" className="w-10 bg-transparent text-sm font-black text-blue-500 outline-none py-2 ml-4 text-center" value={set.reps} placeholder="0" onChange={(e) => {
-                            const val = e.target.value;
                             const updatedEx = [...currentWorkout.exercises];
-                            updatedEx[exIdx] = { ...updatedEx[exIdx], sets: [...updatedEx[exIdx].sets] };
-                            updatedEx[exIdx].sets[sIdx] = { ...updatedEx[exIdx].sets[sIdx], reps: val };
+                            updatedEx[exIdx].sets[sIdx].reps = e.target.value;
                             updateTrainingData(updatedEx);
                          }}/>
                          <span className="text-[9px] font-black text-zinc-600 uppercase ml-1">раз</span>
                       </div>
                       <button onClick={() => {
                         const updated = [...currentWorkout.exercises];
-                        updated[exIdx] = { ...updated[exIdx], sets: updated[exIdx].sets.filter((_, i) => i !== sIdx) };
+                        updated[exIdx].sets = updated[exIdx].sets.filter((_, i) => i !== sIdx);
                         updateTrainingData(updated);
-                      }} className="text-zinc-800 p-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                      }} className="text-zinc-800 p-2">✕</button>
                     </div>
                   ))}
                   <button onClick={() => {
                     const updated = [...currentWorkout.exercises];
-                    updated[exIdx] = { ...updated[exIdx], sets: [...updated[exIdx].sets, { weight: '', reps: '' }] };
+                    updated[exIdx].sets.push({ weight: '', reps: '' });
                     updateTrainingData(updated);
                   }} className="text-[9px] font-black uppercase text-zinc-700 mt-2 ml-5">+ Set</button>
                 </div>
@@ -280,11 +269,10 @@ const Gym = ({ user, showToast }) => {
         </div>
       )}
 
-      {/* DELETE MODAL */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-6 animate-in zoom-in-95">
           <div className="bg-zinc-900 border border-zinc-800 w-full max-w-xs rounded-[40px] p-10 text-center shadow-2xl">
-             <h3 className="text-lg font-black uppercase italic mb-8">Удалить программу?</h3>
+             <h3 className="text-lg font-black uppercase italic mb-8">Удалить?</h3>
              <div className="grid grid-cols-2 gap-4">
                 <button onClick={() => setDeleteConfirm(null)} className="py-4 rounded-2xl bg-zinc-800 text-[10px] font-black uppercase text-white/40">Нет</button>
                 <button onClick={async () => {
@@ -302,3 +290,4 @@ const Gym = ({ user, showToast }) => {
 };
 
 export default Gym;
+                           
